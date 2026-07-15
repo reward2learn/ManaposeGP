@@ -8,6 +8,7 @@ import {
   CircularProgress, Skeleton,
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
+import CloseIcon from '@mui/icons-material/Close';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { SignInPanelGate } from '@/components/auth/sign-in-panel';
 
@@ -183,8 +184,8 @@ export default function PatientsPage() {
                           label={p.gpName}
                           size="small"
                           color="success"
-                          onDelete={() => handleUnassign(p)}
-                          deleteIcon={<CircularProgress size={12} />}
+                          onDelete={saving ? undefined : () => handleUnassign(p)}
+                          deleteIcon={saving ? <CircularProgress size={12} /> : <CloseIcon sx={{ fontSize: 14 }} />}
                         />
                       ) : (
                         <Button
