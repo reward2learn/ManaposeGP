@@ -47,9 +47,9 @@ export default function AdminDashboardPage() {
       href: '/admin/gp-verification',
     },
     {
-      label: 'Patients', value: stats?.totalPatients ?? 0, icon: <DashboardIcon color="primary" sx={{ fontSize: 36 }} />,
+      label: 'Patients', value: stats?.totalPatients ?? 0, icon: <PeopleIcon color="primary" sx={{ fontSize: 36 }} />,
       sub: 'Registered health profiles',
-      href: '/admin/users',
+      href: '/admin/patients',
     },
     {
       label: 'Today\'s Appointments', value: stats?.appointmentsToday ?? 0,
@@ -74,6 +74,7 @@ export default function AdminDashboardPage() {
 
   const quickLinks = [
     { label: 'GP Verification', desc: 'Approve or reject GP registrations', icon: <VerifiedUserIcon />, href: '/admin/gp-verification' },
+    { label: 'Patient Management', desc: 'View patients and assign to GPs', icon: <PeopleIcon />, href: '/admin/patients' },
     { label: 'Practice Settings', desc: 'Hours, timezone, defaults, billing', icon: <SettingsIcon />, href: '/admin/practice-settings' },
     { label: 'Appointment Types', desc: 'Configure visit types and durations', icon: <CalendarTodayIcon />, href: '/admin/appointment-types' },
     { label: 'Fee Schedule', desc: 'MBS items and practice fees', icon: <SettingsIcon />, href: '/admin/fee-schedule' },

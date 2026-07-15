@@ -3,6 +3,7 @@ import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
 import { getAppointmentTypes, upsertAppointmentType, deleteAppointmentType, ensureAdminTables } from '@/domain/admin/admin-config-service';
 import { logActivity } from '@/domain/admin/activity-log-service';
+import { seedAppointmentTypes } from '@/domain/admin/appointment-seed';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
   try {
     await ensureAdminTables(db);
-    return NextResponse.json({ success: true, types: await getAppointmentTypes(db) }); }
+    let types = await getAppointmentTypes(db);
+    // Auto-seed default types if table is empty
+    if (types.length === 0) {
+      const seeded = await seedAppointmentTypes(db);
+      if (seeded > 0) {
+        types = await getAppointmentTypes(db);
+      }
+    }
+    return NextResponse.json({ success: true, types }); }
   catch (err) { return jsonError(err instanceof Error ? err.message : 'Failed', 500); }
 }
 
