@@ -110,7 +110,10 @@ async function handleInstagramScrape(postUrl: string): Promise<NextResponse> {
   };
 
   const enhanced = await enhanceContent(scraped.title, scraped.content, sourceName);
-  const blogPost = await createBlogPost({ scraped, enhanced, sourceUrl: post.url });
+  const blogPost = await createBlogPost({
+    scraped, enhanced, sourceUrl: post.url,
+    published: false, imageUrl: post.imageUrl || undefined,
+  });
 
   indexBlogPost(blogPost.id, blogPost.title, blogPost.content).catch(() => {});
 
@@ -137,6 +140,9 @@ async function handleArticleScrape(articleUrl: string): Promise<NextResponse> {
     scraped,
     enhanced,
     sourceUrl: articleUrl,
+    published: false,
+    imageUrl: scraped.imageUrl || undefined,
+    sectionImages: scraped.images.map((i) => ({ src: i.src, alt: i.alt || '' })),
   });
 
   indexBlogPost(blogPost.id, blogPost.title, blogPost.content).catch(() => {});
@@ -217,13 +223,16 @@ async function handlePasteContent(request: Request): Promise<NextResponse> {
       scraped: { ...scraped, content: aiPrompt },
       enhanced,
       sourceUrl: sourceUrl ?? '',
+      published: false, // Draft by default for admin-pasted content
+      imageUrl: imageUrl || undefined,
+      sectionImages: images.map((i) => ({ src: i.src, alt: i.alt })),
     });
 
     indexBlogPost(blogPost.id, blogPost.title, blogPost.content).catch(() => {});
 
     return NextResponse.json({
       success: true,
-      post: { title: blogPost.title, slug: blogPost.slug, url: sourceUrl, type: 'pasted' },
+      post: { title: blogPost.title, slug: blogPost.slug, url: sourceUrl, type: 'pasted', imageUrl: blogPost.imageUrl, id: blogPost.id },
     });
   } catch (err) {
     return NextResponse.json(

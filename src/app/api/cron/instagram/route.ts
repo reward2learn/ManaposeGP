@@ -86,7 +86,10 @@ async function handleCron(forceRun: boolean): Promise<NextResponse> {
         };
 
         const enhanced = await enhanceContent(scraped.title, scraped.content, scraped.sourceName);
-        const blogPost = await createBlogPost({ scraped, enhanced, sourceUrl: post.url });
+        const blogPost = await createBlogPost({
+          scraped, enhanced, sourceUrl: post.url,
+          published: true, imageUrl: post.imageUrl || undefined,
+        });
 
         // Index into knowledge base (fire-and-forget)
         indexBlogPost(blogPost.id, blogPost.title, blogPost.content).then(
