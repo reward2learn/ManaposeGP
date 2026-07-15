@@ -17,6 +17,29 @@ Step-by-step workflows for common admin development tasks.
 5. Add DDL to `ADMIN_TABLE_DDL` array in `admin-config-service.ts`
 6. Run `bun run type-check` and `bun run lint`
 
+## Blog Management Workflow
+
+### Creating a blog post
+1. User submits URL via `/blog/create` or `/config/automation`
+2. Content scraped via `scrapeUrl()` (cheerio) or Instagram scraper
+3. Images extracted from og:image + article `<img>` tags
+4. AI enhances via `enhanceContent()` — rephrases, formats, adds headings
+5. Post created via `createBlogPost()` with `published` flag
+6. If pasted content: HTML images extracted, plaintext sent to AI
+7. `indexBlogPost()` called (fire-and-forget) for AI embedding
+
+### Editing a blog post
+1. Admin opens `/admin/blog` → clicks Edit on a post
+2. Edit dialog shows title, content (markdown), excerpt, image URL, section images (JSON), publish toggle
+3. Save calls `PATCH /api/blog/admin` → `updateBlogPost()`
+4. If content changed, re-indexes via `indexBlogPost()`
+
+### Publishing flow
+- Admin-created posts: draft by default → admin reviews → clicks "Draft" chip → toggles to "Published"
+- Automated posts (Instagram cron): published immediately
+- Public blog page (`/blog`) only shows `published = true`
+- AI knowledge base searches all posts (draft + published)
+
 ## Fixing a missing column error
 
 1. Identify the missing column from the Prisma error message

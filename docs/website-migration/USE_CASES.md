@@ -192,6 +192,26 @@
 | UC-AUTH-13 | Production URL consistency | — | `PRODUCTION_APP_URL` | — | Matches `NEXT_PUBLIC_APP_URL` or hardcoded `manapausegp.vercel.app` |
 
 ---
+### Blog Management
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-BLOG-01 | Create post from URL | pin | `POST /api/blog/create` | `BlogPost` | Scrapes URL, enhances with AI, indexes into knowledge base |
+| UC-BLOG-02 | Create post from pasted content | pin | `POST /api/config/automation?action=paste-content` | `BlogPost` | Handles HTML/text, extracts images, AI rephrases |
+| UC-BLOG-03 | Scrape Instagram post | pin | `POST /api/config/automation?action=scrape-url` | `BlogPost` | Instagram oEmbed + HTML fallback |
+| UC-BLOG-04 | Auto-scrape Instagram profile | cron | `GET /api/cron/instagram` | `BlogPost` | Vercel scheduled + manual Run Now |
+| UC-BLOG-05 | Scrape health article URL | pin | `POST /api/config/automation?action=scrape-url` | `BlogPost` | Cheerio-based; captures images as sectionImages |
+| UC-BLOG-06 | Draft/published workflow | — | `published` field | `BlogPost` | Admin-created = draft; automated = published |
+| UC-BLOG-07 | List all posts for admin | pin | `GET /api/blog/admin` | `BlogPost` | Shows drafts + published; table with edit/view |
+| UC-BLOG-08 | Edit blog post | pin | `PATCH /api/blog/admin` | `BlogPost` | Update content, images, publish status; re-index |
+| UC-BLOG-09 | Toggle publish/draft | pin | `PATCH /api/blog/admin` | `BlogPost` | One-click chip toggle on admin table |
+| UC-BLOG-10 | Public blog listing | public | `GET /api/blog` | `BlogPost` | Only published posts shown |
+| UC-BLOG-11 | AI blog knowledge search | any | `search_blog_knowledge` tool | `blog_embeddings` | RAG via `searchKnowledgeBase()`; works on drafts too |
+| UC-BLOG-12 | Card image + section images | admin | `imageUrl` + `sectionImages` fields | `BlogPost` | Card thumbnail, header image, body section dividers |
+| UC-BLOG-13 | Duplicate prevention | — | `findPostBySourceUrl()` | `BlogPost` | Skips posts with same source_url |
+| UC-BLOG-14 | Blog admin page | pin | `/admin/blog` | — | Table, edit dialog, publish toggle, view link |
+
+---
 
 ## Non-goals (MVP)
 
