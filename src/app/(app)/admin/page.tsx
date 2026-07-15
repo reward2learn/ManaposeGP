@@ -15,6 +15,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HistoryIcon from '@mui/icons-material/History';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { SignInPanelGate } from '@/components/auth/sign-in-panel';
 
@@ -76,6 +77,7 @@ export default function AdminDashboardPage() {
     { label: 'GP Verification', desc: 'Approve or reject GP registrations', icon: <VerifiedUserIcon />, href: '/admin/gp-verification' },
     { label: 'Patient Management', desc: 'View patients and assign to GPs', icon: <PeopleIcon />, href: '/admin/patients' },
     { label: 'Blog Management', desc: 'Edit, publish, and manage blog posts', icon: <SettingsIcon />, href: '/admin/blog' },
+    { label: 'Health Education', desc: 'Manage medical articles and health library', icon: <MenuBookIcon />, href: '/admin/health-education' },
     { label: 'Practice Settings', desc: 'Hours, timezone, defaults, billing', icon: <SettingsIcon />, href: '/admin/practice-settings' },
     { label: 'Appointment Types', desc: 'Configure visit types and durations', icon: <CalendarTodayIcon />, href: '/admin/appointment-types' },
     { label: 'Fee Schedule', desc: 'MBS items and practice fees', icon: <SettingsIcon />, href: '/admin/fee-schedule' },
