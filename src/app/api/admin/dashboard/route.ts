@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
 import { getDashboardStats } from '@/domain/admin/activity-log-service';
+import { ensureGpProfileColumns } from '@/domain/health/gp-profile-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
 
   try {
+    await ensureGpProfileColumns(db);
     const stats = await getDashboardStats(db);
     return NextResponse.json({ success: true, stats });
   } catch (err) {

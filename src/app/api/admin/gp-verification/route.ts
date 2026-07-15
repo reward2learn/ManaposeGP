@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
 import { logActivity } from '@/domain/admin/activity-log-service';
+import { ensureGpProfileColumns } from '@/domain/health/gp-profile-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
 
   try {
+    await ensureGpProfileColumns(db);
+
     const gps = await db.gPProfile.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
@@ -52,6 +55,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success) return jsonError(`Validation: ${parsed.error.issues[0]?.message}`);
 
   try {
+    await ensureGpProfileColumns(db);
+
     const updateData: Record<string, unknown> = {
       verificationStatus: parsed.data.status,
       verificationNotes: parsed.data.notes ?? null,
