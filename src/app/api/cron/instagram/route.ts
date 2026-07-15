@@ -13,7 +13,7 @@
 import { NextResponse } from 'next/server';
 import { scrapeInstagramProfile } from '@/domain/blog/instagram-scraper';
 import { enhanceContent } from '@/domain/blog/content-enhancer';
-import { createBlogPost, type BlogPost } from '@/domain/blog/blog-service';
+import { createBlogPost, findPostBySourceUrl, type BlogPost } from '@/domain/blog/blog-service';
 import { indexBlogPost } from '@/domain/knowledge/ai-indexer';
 import { getConfig, updateConfig, addLog, shouldRunNow } from '@/domain/blog/automation-service';
 import { requirePin } from '@/lib/auth/guards';
@@ -46,8 +46,9 @@ async function handleCron(forceRun: boolean): Promise<NextResponse> {
 
   const startTime = Date.now();
   let postsFound = 0;
-  let postsCreated = 0;
-  const errors: string[] = [];
+    let postsCreated = 0;
+    let duplicatesSkipped = 0;
+    const errors: string[] = [];
   const created: Array<{ title: string; slug: string }> = [];
 
   try {
@@ -64,9 +65,17 @@ async function handleCron(forceRun: boolean): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: 'No new posts found', postsFound: 0 });
     }
 
-    // Process each post
+    // Process each post (skip duplicates)
     for (const post of posts) {
       try {
+        // Check for duplicate by source URL
+        const existing = await findPostBySourceUrl(post.url);
+        if (existing) {
+          console.log(`[cron] Skipping duplicate: ${post.url} (already exists as "${existing.title}")`);
+          duplicatesSkipped++;
+          continue;
+        }
+
         const scraped = {
           title: post.caption.slice(0, 80).replace(/\n/g, ' '),
           content: post.caption,
@@ -100,11 +109,11 @@ async function handleCron(forceRun: boolean): Promise<NextResponse> {
 
     // Log
     await addLog({
-      status: postsCreated > 0 ? 'success' : errors.length > 0 ? 'partial' : 'failed',
+      status: postsCreated > 0 ? 'success' : errors.length > 0 ? 'partial' : 'success',
       postsFound,
       postsCreated,
       errorMessage: errors.length ? errors.join('; ') : undefined,
-      details: { durationMs: Date.now() - startTime, created },
+      details: { durationMs: Date.now() - startTime, duplicatesSkipped, created },
     });
 
     return NextResponse.json({

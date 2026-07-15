@@ -121,7 +121,7 @@ async function fetchPostViaHtml(shortcode: string): Promise<{ caption: string; i
 export async function scrapeInstagramProfile(
   username: string,
   limit = 5,
-  since?: Date,
+  _since?: Date,
 ): Promise<InstagramPost[]> {
   const cleanUsername = username.replace('@', '').trim();
   const profileUrl = `https://www.instagram.com/${cleanUsername}/`;
@@ -178,4 +178,33 @@ export async function scrapeInstagramProfile(
   }
 
   return posts;
+}
+
+/**
+ * Scrape a single Instagram post by its URL.
+ * Extracts the shortcode from the URL and fetches details directly.
+ */
+export async function scrapeInstagramPostUrl(postUrl: string): Promise<InstagramPost | null> {
+  const match = postUrl.match(/\/p\/([A-Za-z0-9_-]+)/) || postUrl.match(/\/reel\/([A-Za-z0-9_-]+)/);
+  if (!match) return null;
+
+  const shortcode = match[1];
+  const url = `https://www.instagram.com/p/${shortcode}/`;
+
+  // Try oEmbed first
+  let details = await fetchPostViaOembed(shortcode);
+
+  // Fall back to HTML scraping
+  if (!details) {
+    details = await fetchPostViaHtml(shortcode);
+  }
+
+  if (!details) return null;
+
+  return {
+    shortcode,
+    url,
+    caption: details.caption,
+    imageUrl: details.imageUrl,
+  };
 }

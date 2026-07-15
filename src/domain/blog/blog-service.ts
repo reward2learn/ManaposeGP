@@ -104,3 +104,20 @@ export async function getBlogPostById(id: string): Promise<BlogPost | null> {
   );
   return result[0] ?? null;
 }
+
+/**
+ * Check if a post with the given source URL already exists in the database.
+ * Returns the existing post if found, null otherwise.
+ */
+export async function findPostBySourceUrl(sourceUrl: string): Promise<BlogPost | null> {
+  if (!sourceUrl) return null;
+  const db = createClient();
+  const result = await db.$queryRawUnsafe<Array<BlogPost>>(
+    `SELECT id, title, slug, content, excerpt, source_url as "sourceUrl", source_name as "sourceName", image_url as "imageUrl", author_name as "authorName", COALESCE(tags, '{}') as tags, published, created_at as "createdAt"
+     FROM blog_posts
+     WHERE source_url = $1
+     LIMIT 1`,
+    sourceUrl,
+  );
+  return result[0] ?? null;
+}

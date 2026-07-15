@@ -27,9 +27,11 @@ import {
   TableRow,
   TextField,
   Typography,
+  Divider,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import LinkIcon from '@mui/icons-material/Link';
 import { AuthGate } from '@/components/auth/auth-gate';
 import { SignInPanelGate } from '@/components/auth/sign-in-panel';
 
@@ -76,6 +78,12 @@ export default function AutomationConfigPage() {
   const [maxPosts, setMaxPosts] = useState(5);
   const [scheduleTime, setScheduleTime] = useState('23:00');
   const [scheduleTimezone, setScheduleTimezone] = useState('Australia/Sydney');
+
+  // Single URL scrape state
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ title: string; slug: string } | null>(null);
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -138,6 +146,33 @@ export default function AutomationConfigPage() {
       }
     } catch { setError('Run failed'); }
     finally { setRunning(false); }
+  };
+
+  const handleScrapeUrl = async () => {
+    if (!scrapeUrl.trim()) return;
+    setScraping(true);
+    setScrapeResult(null);
+    setScrapeError(null);
+    try {
+      const res = await fetch('/api/config/automation?action=scrape-url', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: scrapeUrl }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setScrapeResult(data.post);
+        setScrapeUrl('');
+        setSuccess(`Post created: ${data.post.title}`);
+        fetchConfig(); // Refresh logs
+      } else {
+        setScrapeError(data.error || 'Failed to extract post');
+      }
+    } catch {
+      setScrapeError('Network error');
+    }
+    finally { setScraping(false); }
   };
 
   return (
@@ -239,6 +274,49 @@ export default function AutomationConfigPage() {
                 </Button>
               </Stack>
             </Stack>
+          </CardContent>
+        </Card>
+
+        {/* Scrape Single Post URL — like /blog/create */}
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+              Extract Single Instagram Post
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Paste an Instagram post URL to extract it immediately — bypasses the profile scraper and schedule.
+              Duplicate posts (same URL) are skipped automatically.
+            </Typography>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+              <TextField
+                fullWidth
+                label="Instagram Post URL"
+                placeholder="https://www.instagram.com/p/ABC123xyz/"
+                value={scrapeUrl}
+                onChange={(e) => setScrapeUrl(e.target.value)}
+                size="small"
+                disabled={scraping}
+                helperText="Works with /p/ and /reel/ URLs"
+              />
+              <Button
+                variant="contained"
+                onClick={handleScrapeUrl}
+                disabled={scraping || !scrapeUrl.trim()}
+                startIcon={scraping ? <CircularProgress size={16} /> : <LinkIcon />}
+                sx={{ minWidth: 140, mt: 0.5 }}
+              >
+                {scraping ? 'Extracting…' : 'Extract Post'}
+              </Button>
+            </Stack>
+            {scrapeResult && (
+              <Alert severity="success" sx={{ mt: 2 }} onClose={() => setScrapeResult(null)}>
+                Post created: <strong>{scrapeResult.title}</strong> —{' '}
+                <a href={`/blog/${scrapeResult.slug}`} target="_blank" rel="noopener" style={{ fontWeight: 600 }}>View post</a>
+              </Alert>
+            )}
+            {scrapeError && (
+              <Alert severity="error" sx={{ mt: 2 }} onClose={() => setScrapeError(null)}>{scrapeError}</Alert>
+            )}
           </CardContent>
         </Card>
 
