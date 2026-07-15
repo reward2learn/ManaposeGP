@@ -79,10 +79,36 @@ Cookie: `rosalita.session` (JWT via `jose`, `ENCRYPTION_KEY` 64 hex chars).
 | Path | Content |
 |------|---------|
 | `docs/knowledge-base/website-migration.md` | Stack, phases, RTK map, cutover, security, deploy |
-| `docs/website-migration/USE-CASES.md` | Full UC table |
+| `docs/website-migration/USE-CASES.md` | Full UC table (Rosalita + Admin) |
 | `docs/website-migration/LEGACY-API-INVENTORY.md` | Endpoint matrix |
+| `docs/admin/TEST_PLAN.md` | Admin feature test plan |
 | `.opencode/context/workflows/website-migration-workflow.md` | Per-phase agent workflow |
+| `.opencode/context/workflows/admin-workflow.md` | Admin development workflow |
 | `.tmp/tasks/website-migration-README.md` | TaskManager phase index |
+
+## Agents & Skills
+
+| Path | Purpose |
+|------|---------|
+| `.opencode/agent/core/admin-agent.md` | Admin platform development agent |
+| `.opencode/agent/core/website-migration-commander.md` | Migration orchestrator (planned) |
+| `.opencode/skills/admin-db-ddl.md` | Database DDL/migration patterns |
+| `.opencode/skills/admin-auth-guards.md` | Auth tier guards and session management |
+| `.opencode/skills/admin-dashboard.md` | Admin dashboard API and stats |
+| `.opencode/skills/admin-gp-verification.md` | GP verification workflow (raw SQL) |
+| `.opencode/skills/admin-app-config.md` | OpenAI key, chat settings, feature flags |
+| `.opencode/skills/admin-crud.md` | CRUD for practice configuration entities |
+| `.opencode/skills/google-oauth.md` | Google OAuth configuration and troubleshooting |
+
+## ManaposeGP Admin Quick Reference
+
+- **Production URL**: `https://manapausegp.vercel.app`
+- **Cookie**: `manaposegp.session` (JWT HS256, `ENCRYPTION_KEY` first 32 chars)
+- **All admin routes**: `requirePin` guard → pin tier or verified GP
+- **Config routes**: `requireWriteAuth` guard → pin or google tier
+- **DDL pattern**: Always split into individual `$executeRawUnsafe` calls (no multi-statement — PostgreSQL error 42601)
+- **Raw SQL fallback**: Use `$queryRawUnsafe` when Prisma schema columns may not exist in production DB
+- **Dashboard stats**: `Promise.allSettled` for resilience
 
 ## Orchestrator
 

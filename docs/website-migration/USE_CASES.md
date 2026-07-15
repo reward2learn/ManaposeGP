@@ -126,6 +126,73 @@
 
 ---
 
+## Admin use cases (ManaposeGP Platform)
+
+### Admin Dashboard
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-ADMIN-01 | View admin dashboard with stats | pin | `GET /api/admin/dashboard` | `GPProfile`, `HealthProfile`, `Appointment`, `GPConsultation`, `Secret` | 5 stats cards render with correct values; all cards clickable to relative routes |
+| UC-ADMIN-02 | OpenAI key status reflects DB+env | pin | dashboard card → `getOpenAiKeyStatus()` | `Secret`, env var | Card shows "Configured" when key in DB or env, "Missing" otherwise |
+| UC-ADMIN-03 | Resilient dashboard on partial failures | pin | `Promise.allSettled` in `getDashboardStats` | All | One failing stat doesn't zero entire dashboard |
+
+### AI Configuration
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-AI-01 | View OpenAI key status | pin | `GET /api/config/openai-key` | `Secret` | Shows configured/not-configured + source (db/env) |
+| UC-AI-02 | Save OpenAI key (encrypted) | pin | `POST /api/config/openai-key` | `Secret` | AES-256-GCM encrypted; key never shown after save |
+| UC-AI-03 | Remove OpenAI key from DB | pin | `DELETE /api/config/openai-key` | `Secret` | Falls back to env var if set |
+| UC-AI-04 | Toggle chat web search | pin | `PATCH /api/config/settings` | `AppSetting` | `webSearchEnabled` persisted; 401 with descriptive error if auth fails |
+| UC-AI-05 | Configure via consolidated admin route | pin | `/admin/ai-config` | — | `OpenAiKeyForm` + `ChatSettingsForm` under admin; `/config` redirects |
+
+### GP Verification
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-GPV-01 | List all registered GPs | pin | `GET /api/admin/gp-verification` | `GPProfile` | Raw SQL query; works even if `verification_status` column missing (COALESCE fallback) |
+| UC-GPV-02 | Approve GP registration | pin | `PATCH /api/admin/gp-verification` | `GPProfile` | Sets `verified=true`, `verification_status='APPROVED'` via raw SQL |
+| UC-GPV-03 | Reject GP registration | pin | `PATCH /api/admin/gp-verification` | `GPProfile` | Sets `verified=false`, `verification_status='REJECTED'`, optional notes |
+| UC-GPV-04 | GP columns auto-created | pin (on access) | `ensureGpProfileColumns(db)` | `GPProfile` | ALTER TABLE adds `verification_status`, `verification_notes`, `updated_at` if missing |
+
+### Admin CRUD
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-CRUD-01 | Manage appointment types | pin | `/api/admin/appointment-types` | `AppointmentType` | CRUD with name, duration, color; table auto-created |
+| UC-CRUD-02 | Manage fee schedule | pin | `/api/admin/fee-schedule` | `FeeScheduleItem` | MBS item numbers with practice fees; table auto-created |
+| UC-CRUD-03 | Manage provider directory | pin | `/api/admin/providers` | `ProviderDirectory` | Pathology/radiology filter; table auto-created |
+| UC-CRUD-04 | Manage notification templates | pin | `/api/admin/notification-templates` | `NotificationTemplate` | Email/SMS templates with `{{variables}}`; table auto-created |
+| UC-CRUD-05 | Manage platform users | pin | `/api/admin/users` | `PlatformUser` | Update tier, role, status |
+| UC-CRUD-06 | View activity log | pin | `/api/admin/activity-log` | `ActivityLog` | Audit trail with action filter; table auto-created |
+| UC-CRUD-07 | Tables auto-created on first access | pin (on access) | `ensureAdminTables(db)` | All above | `CREATE TABLE IF NOT EXISTS` for 6 tables; no migration needed |
+
+### Feature Flags
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-FF-01 | View feature flags | pin | `GET /api/admin/feature-flags` | `AppSetting.featureFlags` | Returns JSON of boolean flags; empty `{}` if table missing |
+| UC-FF-02 | Toggle feature flags | pin | `PATCH /api/admin/feature-flags` | `AppSetting` | Upserts `feature_flags` column; resilient to DDL failures |
+| UC-FF-03 | DDL split into single statements | — | `ensureAppSettingsTable(db)` | — | No 42601 "multiple commands into prepared statement" error |
+
+### Practice Settings
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-PS-01 | View practice settings | pin | `GET /api/admin/practice-settings` | `PracticeSettings` | Singleton with smart defaults (Australia/Adelaide, 15-min slots, $85 bulk bill) |
+| UC-PS-02 | Update practice settings | pin | `PATCH /api/admin/practice-settings` | `PracticeSettings` | Timezone, hours, billing defaults |
+
+### Auth & Session
+
+| ID | Use case | Auth | Route / API | Models | Acceptance |
+|----|----------|------|-------------|--------|------------|
+| UC-AUTH-10 | Pin-tier admin access | pin | All `/api/admin/*` | — | `requirePin` guard; descriptive error messages |
+| UC-AUTH-11 | Write auth for config APIs | pin/google | `/api/config/*` | — | `requireWriteAuth` with tier-specific messages |
+| UC-AUTH-12 | Google OAuth redirect URI match | — | `GET /api/auth?action=google` | — | URI matches Google Cloud Console; no redirect_uri_mismatch |
+| UC-AUTH-13 | Production URL consistency | — | `PRODUCTION_APP_URL` | — | Matches `NEXT_PUBLIC_APP_URL` or hardcoded `manapausegp.vercel.app` |
+
+---
+
 ## Non-goals (MVP)
 
 - Admin UI to edit `AppPage` in database (post-MVP P10)
