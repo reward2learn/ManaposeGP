@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
-import { getProviders, upsertProvider, deleteProvider } from '@/domain/admin/admin-config-service';
+import { getProviders, upsertProvider, deleteProvider, ensureAdminTables } from '@/domain/admin/admin-config-service';
 import { logActivity } from '@/domain/admin/activity-log-service';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!guard.ok) return guard.response;
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
   try {
+    await ensureAdminTables(db);
     const type = new URL(request.url).searchParams.get('type') ?? undefined;
     return NextResponse.json({ success: true, providers: await getProviders(db, type) });
   } catch (err) { return jsonError(err instanceof Error ? err.message : 'Failed', 500); }

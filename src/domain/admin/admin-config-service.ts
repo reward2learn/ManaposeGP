@@ -1,6 +1,91 @@
 import type { DbClient } from '@/lib/db';
 import { ensureAppSettingsTable } from '@/domain/config/app-settings-service';
 
+// ── Table DDL for tables that may be missing if migrations never ran ─────────
+
+const ADMIN_TABLE_DDL = [
+  `CREATE TABLE IF NOT EXISTS practice_settings (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    practice_name TEXT,
+    timezone TEXT NOT NULL DEFAULT 'Australia/Adelaide',
+    opening_hours JSONB NOT NULL DEFAULT '{}',
+    default_appointment_duration INT NOT NULL DEFAULT 15,
+    bulk_bill_default BOOLEAN NOT NULL DEFAULT TRUE,
+    default_fee_cents INT NOT NULL DEFAULT 8500,
+    auto_verify_gps BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS appointment_types (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    name TEXT NOT NULL,
+    description TEXT,
+    default_duration INT NOT NULL DEFAULT 15,
+    color TEXT NOT NULL DEFAULT '#2196F3',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS fee_schedule_items (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    mbs_item_number TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'CONSULTATION',
+    schedule_fee INT NOT NULL DEFAULT 0,
+    practice_fee INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(mbs_item_number)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS provider_directory (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    provider_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    address TEXT,
+    phone TEXT,
+    fax TEXT,
+    email TEXT,
+    website TEXT,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS notification_templates (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    template_type TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_template TEXT NOT NULL,
+    channel TEXT NOT NULL DEFAULT 'EMAIL',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS activity_logs (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    actor_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target TEXT,
+    details JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+];
+
+export async function ensureAdminTables(db: DbClient): Promise<void> {
+  await ensureAppSettingsTable(db); // app_settings (also covers feature_flags)
+  for (const ddl of ADMIN_TABLE_DDL) {
+    await db.$executeRawUnsafe(ddl);
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface AppointmentTypeData {

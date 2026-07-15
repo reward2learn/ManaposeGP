@@ -8,11 +8,9 @@ CREATE TABLE IF NOT EXISTS app_settings (
   web_search_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   feature_flags JSONB NOT NULL DEFAULT '{}',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+);`;
 
--- Fix tables created by the old 3-column DDL (before feature_flags was added).
-ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS feature_flags JSONB NOT NULL DEFAULT '{}';
-`;
+const APP_SETTINGS_ALTER = `ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS feature_flags JSONB NOT NULL DEFAULT '{}';`;
 
 export interface AppSettingsDto {
   webSearchEnabled: boolean;
@@ -21,6 +19,7 @@ export interface AppSettingsDto {
 
 export async function ensureAppSettingsTable(db: DbClient): Promise<void> {
   await db.$executeRawUnsafe(APP_SETTINGS_DDL);
+  await db.$executeRawUnsafe(APP_SETTINGS_ALTER);
 }
 
 export async function getAppSettings(db: DbClient): Promise<AppSettingsDto> {

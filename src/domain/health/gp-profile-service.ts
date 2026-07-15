@@ -3,16 +3,10 @@
  */
 import type { DbClient } from '@/lib/db';
 
-const GP_PROFILE_DDL = `
--- Add columns that may be missing if the table was created by raw-SQL INSERT
--- rather than a Prisma/ZenStack migration.
-ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS verification_status TEXT NOT NULL DEFAULT 'PENDING';
-ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS verification_notes TEXT;
-ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-`;
-
 export async function ensureGpProfileColumns(db: DbClient): Promise<void> {
-  await db.$executeRawUnsafe(GP_PROFILE_DDL);
+  await db.$executeRawUnsafe(`ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS verification_status TEXT NOT NULL DEFAULT 'PENDING'`);
+  await db.$executeRawUnsafe(`ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS verification_notes TEXT`);
+  await db.$executeRawUnsafe(`ALTER TABLE gp_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
 }
 
 export interface GpProfile {

@@ -22,9 +22,9 @@ export async function requireSession(request: Request): Promise<GuardResult> {
 
 export async function requireWriteAuth(request: Request): Promise<GuardResult> {
   const session = await getSessionFromRequest(request);
-  if (!session) return unauthorized();
+  if (!session) return unauthorized('Write access requires authentication. Please sign in.');
   if (session.tier !== 'pin' && session.tier !== 'google') {
-    return unauthorized();
+    return unauthorized(`Write access requires pin or google tier (current: ${session.tier}).`);
   }
   return { ok: true, session };
 }

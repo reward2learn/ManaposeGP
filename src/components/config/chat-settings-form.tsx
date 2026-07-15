@@ -38,7 +38,17 @@ export function ChatSettingsForm() {
         : 'Web search disabled for the assistant.');
     } catch (err) {
       setWebSearchEnabled(!checked);
-      setError(err instanceof Error ? err.message : 'Could not update chat settings.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (err && typeof err === 'object' && 'data' in err) {
+        const data = (err as { data: unknown }).data;
+        const msg = data && typeof data === 'object' && 'error' in data
+          ? String((data as { error: unknown }).error)
+          : 'Server error';
+        setError(msg);
+      } else {
+        setError('Could not update chat settings.');
+      }
     }
   };
 

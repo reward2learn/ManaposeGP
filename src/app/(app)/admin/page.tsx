@@ -44,26 +44,31 @@ export default function AdminDashboardPage() {
       label: 'Total GPs', value: stats?.totalGps ?? 0, icon: <PeopleIcon color="primary" sx={{ fontSize: 36 }} />,
       sub: stats?.pendingGps ? `${stats.pendingGps} pending approval` : 'All approved',
       color: stats?.pendingGps ? 'warning.main' : 'success.main',
+      href: '/admin/gp-verification',
     },
     {
       label: 'Patients', value: stats?.totalPatients ?? 0, icon: <DashboardIcon color="primary" sx={{ fontSize: 36 }} />,
       sub: 'Registered health profiles',
+      href: '/admin/users',
     },
     {
       label: 'Today\'s Appointments', value: stats?.appointmentsToday ?? 0,
       icon: <CalendarTodayIcon color="primary" sx={{ fontSize: 36 }} />,
       sub: 'Booked or confirmed',
+      href: '/admin/appointment-types',
     },
     {
       label: 'Consultations (Month)', value: stats?.consultationsThisMonth ?? 0,
       icon: <EventIcon color="primary" sx={{ fontSize: 36 }} />,
       sub: 'This calendar month',
+      href: '/admin/feature-flags',
     },
     {
       label: 'OpenAI Key', value: stats?.openAiKeyConfigured ? 'Configured' : 'Missing',
       icon: <KeyIcon color={stats?.openAiKeyConfigured ? 'success' : 'error'} sx={{ fontSize: 36 }} />,
       sub: stats?.openAiKeyConfigured ? 'AI features enabled' : 'Click to configure',
       color: stats?.openAiKeyConfigured ? 'success.main' : 'error.main',
+      href: '/admin/ai-config',
     },
   ];
 
@@ -91,12 +96,8 @@ export default function AdminDashboardPage() {
             <Grid key={c.label} size={{ xs: 12, sm: 6, md: 4 }}>
               <Card
                 variant="outlined"
-                sx={
-                  c.label === 'OpenAI Key'
-                    ? { cursor: 'pointer', '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' } }
-                    : undefined
-                }
-                onClick={c.label === 'OpenAI Key' ? () => router.push('/admin/ai-config' as Route) : undefined}
+                sx={{ cursor: 'pointer', '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' } }}
+                onClick={() => router.push(c.href as Route)}
               >
                 <CardContent>
                   {loading ? (
