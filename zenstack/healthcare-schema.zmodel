@@ -1,0 +1,321 @@
+// ManaposeGP — Healthcare domain schema extensions (v2 — MVP complete)
+// Append to zenstack/schema.zmodel before running `bun run zen:generate`
+// These tables coexist with the existing restaurant-operations schema.
+
+// ── Enums ────────────────────────────────────────────
+
+enum MenopauseStatus {
+  PREMENOPAUSAL
+  PERIMENOPAUSAL
+  POSTMENOPAUSAL
+  EARLY_MENOPAUSE
+  SURGICAL_MENOPAUSE
+  UNKNOWN
+}
+
+enum SymptomType {
+  hot_flush
+  night_sweat
+  sleep_disturbance
+  mood_change
+  brain_fog
+  joint_pain
+  vaginal_dryness
+  libido_change
+  fatigue
+  weight_change
+  headache
+  palpitations
+  urinary_symptoms
+  skin_changes
+  other
+}
+
+enum MetricSource {
+  apple_health
+  manual
+  device
+  lab_result
+}
+
+enum GuidelineSource {
+  racgp
+  ams
+  jean_hailes
+  etg
+  healthdirect
+  pubmed
+  nps
+  beyond_blue
+  osteoporosis_australia
+}
+
+enum ConsultationType {
+  INITIAL
+  FOLLOW_UP
+  REVIEW
+  EMERGENCY
+}
+
+enum MedicationStatus {
+  ACTIVE
+  DISCONTINUED
+  PAUSED
+  COMPLETED
+}
+
+enum ConsentStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// ── Patient & Health Models ──────────────────────────
+
+model HealthProfile {
+  id                   String           @id @default(cuid())
+  userId               String           @map("user_id")
+  dateOfBirth          DateTime?        @map("date_of_birth") @db.Date
+  sexAtBirth           String?          @map("sex_at_birth")
+  menopauseStatus      MenopauseStatus? @map("menopause_status")
+  heightCm             Float?           @map("height_cm")
+  weightKg             Float?           @map("weight_kg")
+  bloodType            String?          @map("blood_type")
+  allergies            String[]         @default([])
+  chronicConditions    String[]         @default([]) @map("chronic_conditions")
+  currentMedications   String[]         @default([]) @map("current_medications")
+  smokingStatus        String?          @map("smoking_status")
+  alcoholUnitsPerWeek  Int?             @map("alcohol_units_per_week")
+  exerciseMinutesPerWeek Int?           @map("exercise_minutes_per_week")
+  familyHistory        Json?            @map("family_history")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  symptomJournals      SymptomJournal[]
+  healthMetrics        HealthMetric[]
+  medications          Medication[]
+  labResults           LabResult[]
+  consents             PatientConsent[]
+  screeningResults     ScreeningResult[]
+
+  @@map("health_profiles")
+}
+
+model SymptomJournal {
+  id              String       @id @default(cuid())
+  healthProfileId String       @map("health_profile_id")
+  healthProfile   HealthProfile @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  date            DateTime     @db.Date
+  symptomType     SymptomType  @map("symptom_type")
+  severity        Int          @default(0)
+  duration        Int?
+  frequency       Int?
+  triggers        String[]     @default([])
+  reliefFactors   String[]     @default([]) @map("relief_factors")
+  impactOnDaily   Int?         @map("impact_on_daily")
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@index([healthProfileId, date])
+  @@index([healthProfileId, symptomType])
+  @@map("symptom_journals")
+}
+
+model HealthMetric {
+  id              String        @id @default(cuid())
+  healthProfileId String        @map("health_profile_id")
+  healthProfile   HealthProfile @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  metricType      String        @map("metric_type")
+  // heart_rate, resting_heart_rate, hrv, sleep_duration, sleep_quality,
+  // wrist_temperature, body_temperature, steps, active_energy,
+  // blood_pressure_systolic, blood_pressure_diastolic, weight, bmi,
+  // blood_glucose, oxygen_saturation, respiratory_rate,
+  // menstrual_flow, ovulation_test
+  value           Json
+  unit            String?
+  source          MetricSource  @default(apple_health)
+  sourceDevice    String?       @map("source_device")
+  recordedAt      DateTime      @map("recorded_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([healthProfileId, metricType, recordedAt])
+  @@map("health_metrics")
+}
+
+// ── Medication & Lab Models ─────────────────────────
+
+model Medication {
+  id              String           @id @default(cuid())
+  healthProfileId String           @map("health_profile_id")
+  healthProfile   HealthProfile    @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  name            String
+  type            String           // mht, supplement, prescription, otc
+  dosage          String
+  frequency       String
+  route           String?          // oral, transdermal, vaginal, injection, implant
+  startDate       DateTime         @map("start_date") @db.Date
+  endDate         DateTime?        @map("end_date") @db.Date
+  status          MedicationStatus @default(ACTIVE)
+  prescribedBy    String?          @map("prescribed_by")
+  notes           String?
+  adherenceLog    Json             @default("[]") @map("adherence_log")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([healthProfileId, status])
+  @@map("medications")
+}
+
+model LabResult {
+  id              String        @id @default(cuid())
+  healthProfileId String        @map("health_profile_id")
+  healthProfile   HealthProfile @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  testName        String        @map("test_name")
+  testCategory    String        @map("test_category")
+  resultValue     String        @map("result_value")
+  unit            String?
+  referenceRange  String?       @map("reference_range")
+  isAbnormal      Boolean       @default(false) @map("is_abnormal")
+  testDate        DateTime      @map("test_date") @db.Date
+  laboratory      String?
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([healthProfileId, testCategory, testDate])
+  @@map("lab_results")
+}
+
+// ── Clinical & Consent Models ───────────────────────
+
+model GPProfile {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique @map("user_id")
+  name                   String
+  practiceName           String?   @map("practice_name")
+  practiceAddress        String?   @map("practice_address")
+  practiceSuburb         String?   @map("practice_suburb")
+  practiceState          String?   @map("practice_state")
+  practicePostcode       String?   @map("practice_postcode")
+  practicePhone          String?   @map("practice_phone")
+  ahpraNumber            String?   @map("ahpra_number")
+  email                  String?
+  indemnityProvider      String?   @map("indemnity_provider")
+  indemnityPolicyNumber  String?   @map("indemnity_policy_number")
+  indemnityExpiryDate    String?   @map("indemnity_expiry_date")
+  verified               Boolean   @default(false)
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@map("gp_profiles")
+}
+
+model GPConsultation {
+  id               String            @id @default(cuid())
+  patientId        String            @map("patient_id")
+  gpId             String            @map("gp_id")
+  date             DateTime          @db.Date
+  consultationType ConsultationType  @map("consultation_type") @default(INITIAL)
+  duration         Int?
+  summary          String            @db.Text
+  subjectiveNote   String?           @map("subjective_note") @db.Text
+  objectiveNote    String?           @map("objective_note") @db.Text
+  assessmentNote   String?           @map("assessment_note") @db.Text
+  planNote         String?           @map("plan_note") @db.Text
+  treatmentPlan    String?           @map("treatment_plan") @db.Text
+  prescriptions    String[]          @default([])
+  referrals        String[]          @default([])
+  followUp         DateTime?         @map("follow_up")
+  mbsItems         String[]          @default([]) @map("mbs_items")
+  notes            String?           @db.Text
+  aiGenerated      Boolean           @default(false) @map("ai_generated")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@index([patientId, date])
+  @@index([gpId, date])
+  @@map("gp_consultations")
+}
+
+model PatientConsent {
+  id              String        @id @default(cuid())
+  healthProfileId String        @map("health_profile_id")
+  healthProfile   HealthProfile @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  gpId            String        @map("gp_id")
+  consentType     String        @map("consent_type")
+  status          ConsentStatus @default(PENDING)
+  grantedAt       DateTime?     @map("granted_at")
+  expiresAt       DateTime?     @map("expires_at")
+  revokedAt       DateTime?     @map("revoked_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@unique([healthProfileId, gpId])
+  @@map("patient_consents")
+}
+
+// ── Knowledge Base Models ───────────────────────────
+
+model ClinicalGuideline {
+  id          String          @id @default(cuid())
+  source      GuidelineSource
+  title       String
+  category    String
+  content     String          @db.Text
+  summary     String?         @db.Text
+  version     String?
+  lastUpdated DateTime        @map("last_updated")
+  url         String?
+  keywords    String[]        @default([])
+
+  @@index([source, category])
+  @@map("clinical_guidelines")
+}
+
+model MedicalReference {
+  id       String   @id @default(cuid())
+  topic    String
+  subtopic String?
+  content  String   @db.Text
+  source   String
+  url      String?
+  keywords String[] @default([])
+
+  @@index([topic])
+  @@map("medical_references")
+}
+
+model HealthEducation {
+  id           String   @id @default(cuid())
+  title        String
+  category     String   // menopause, bone_health, mental_health, cardiovascular, sexual_health, nutrition, exercise, sleep
+  content      String   @db.Text
+  summary      String   @db.Text
+  source       String   // jean_hailes, ams, healthdirect, beyond_blue
+  language     String   @default("en")
+  readingLevel String?  @map("reading_level") // easy_read, standard, clinical
+  publishedAt  DateTime @map("published_at")
+  reviewedAt   DateTime @map("reviewed_at")
+  tags         String[] @default([])
+  url          String?
+
+  @@index([category, language])
+  @@map("health_education")
+}
+
+// ── Screening Models ────────────────────────────────
+
+model ScreeningResult {
+  id              String        @id @default(cuid())
+  healthProfileId String        @map("health_profile_id")
+  healthProfile   HealthProfile @relation(fields: [healthProfileId], references: [id], onDelete: Cascade)
+  screeningType   String        @map("screening_type") // k10, phq9, gad7, menopause_rating_scale, greene_climacteric
+  score           Int
+  interpretation  String
+  severity        String?       // low, moderate, high, severe
+  completedAt     DateTime      @map("completed_at") @default(now())
+  notes           String?
+
+  @@index([healthProfileId, screeningType])
+  @@map("screening_results")
+}

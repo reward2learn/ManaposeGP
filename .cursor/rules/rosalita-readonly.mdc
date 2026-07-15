@@ -1,0 +1,12 @@
+---
+description: Rosalita repo is read-only reference for ManaposeGP development
+alwaysApply: true
+---
+
+# Rosalita isolation
+
+- **Never modify** `/Users/iliashapiro/Rosalita/` — no writes, edits, deletes, or destructive commands there.
+- Rosalita (especially `Rosalita/website/`) is **reference only** for architecture and migration patterns.
+- All ManaposeGP changes stay in `/Users/iliashapiro/Manapose/` (primarily `website/`).
+- Do not create symlinks from Manapose into Rosalita.
+- Scripts may **read** Rosalita paths for comparison; outputs must land under Manapose only.
