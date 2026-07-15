@@ -54,5 +54,12 @@ export const theme = createTheme({
         },
       },
     },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          marginLeft: 8,
+        },
+      },
+    },
   },
 });
