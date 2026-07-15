@@ -3,6 +3,7 @@ import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
 import { getFeeSchedule, upsertFeeScheduleItem, deleteFeeScheduleItem, ensureAdminTables } from '@/domain/admin/admin-config-service';
 import { logActivity } from '@/domain/admin/activity-log-service';
+import { seedFeeSchedule } from '@/domain/admin/fee-schedule-seed';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
   try {
     await ensureAdminTables(db);
-    return NextResponse.json({ success: true, items: await getFeeSchedule(db) }); }
+    let items = await getFeeSchedule(db);
+    // Auto-seed standard MBS items if table is empty
+    if (items.length === 0) {
+      const seeded = await seedFeeSchedule(db);
+      if (seeded > 0) {
+        items = await getFeeSchedule(db);
+      }
+    }
+    return NextResponse.json({ success: true, items }); }
   catch (err) { return jsonError(err instanceof Error ? err.message : 'Failed', 500); }
 }
 
