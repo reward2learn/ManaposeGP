@@ -24,7 +24,7 @@ Comprehensive reference for agents and developers working on the platform.
 | Testing | Vitest + RTL |
 | Build | `bun run build` (zenstack generate → next build) |
 
-## Admin Platform (15 sub-pages)
+## Admin Platform (16 sub-pages)
 
 | Route | Function | API |
 |-------|----------|-----|
@@ -32,6 +32,7 @@ Comprehensive reference for agents and developers working on the platform.
 | `/admin/gp-verification` | List, view, edit, approve/reject GPs | `/api/admin/gp-verification` |
 | `/admin/patients` | View patients, assign to GPs | `/api/admin/patients` |
 | `/admin/blog` | Blog management: edit, publish, view | `/api/blog/admin` |
+| `/admin/health-education` | List, edit, delete health articles | `/api/admin/health-education` |
 | `/admin/ai-config` | OpenAI key + chat settings | `/api/config/openai-key`, `/api/config/settings` |
 | `/admin/appointment-types` | Auto-seeded (10 types), CRUD | `/api/admin/appointment-types` |
 | `/admin/fee-schedule` | Auto-seeded (33 MBS items), edit fees | `/api/admin/fee-schedule` |
@@ -67,6 +68,21 @@ Comprehensive reference for agents and developers working on the platform.
 - `Promise.allSettled` for resilience
 - OpenAI key check: DB → env var fallback via `getOpenAiKeyStatus()`
 - GP counts, patient counts, appointment/consultation counts
+
+## Health Education System
+
+| Feature | Status |
+|---------|--------|
+| Public listing | `GET /api/health/education` — search/filter by category, language |
+| Article upload | `POST /api/health/education/upload` — creates article + knowledge snippet |
+| Admin CRUD | `GET/PATCH/DELETE /api/admin/health-education` — full lifecycle |
+| Chatbot indexing | `knowledge_snippets` table — key=`admin_{slug}`, updated on edit/delete |
+| Domain service | `health-education-service.ts` — Prisma reads, raw SQL writes |
+| Admin page | `/admin/health-education` — table + edit dialog + delete confirmation |
+| Categories (9) | menopause, mental_health, bone_health, cardiovascular, sexual_health, nutrition, exercise, sleep, general |
+| Sources (10) | jean_hailes, ams, healthdirect, beyond_blue, racgp, nps, pubmed, etg, osteoporosis_australia, admin |
+| Languages | en, es, fr, zh, ar, hi, pt |
+| Reading levels | easy_read, standard, clinical |
 
 ## Blog System
 
