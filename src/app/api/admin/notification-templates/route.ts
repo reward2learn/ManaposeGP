@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
-import { getNotificationTemplates, upsertNotificationTemplate } from '@/domain/admin/admin-config-service';
+import { getNotificationTemplates, upsertNotificationTemplate, ensureAdminTables } from '@/domain/admin/admin-config-service';
 import { logActivity } from '@/domain/admin/activity-log-service';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const guard = await requirePin(request);
   if (!guard.ok) return guard.response;
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
-  try { return NextResponse.json({ success: true, templates: await getNotificationTemplates(db) }); }
+  try {
+    await ensureAdminTables(db);
+    return NextResponse.json({ success: true, templates: await getNotificationTemplates(db) }); }
   catch (err) { return jsonError(err instanceof Error ? err.message : 'Failed', 500); }
 }
 
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!guard.ok) return guard.response;
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
   try {
+    await ensureAdminTables(db);
     const body = await request.json() as Record<string, unknown>;
     const t = await upsertNotificationTemplate(db, {
       templateType: body.templateType as string, subject: body.subject as string,

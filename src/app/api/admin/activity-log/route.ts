@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePin } from '@/lib/auth/guards';
 import { createClient } from '@/lib/db';
 import { getActivityLogs } from '@/domain/admin/activity-log-service';
+import { ensureAdminTables } from '@/domain/admin/admin-config-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const db = createClient({ tier: guard.session.tier, sub: guard.session.sub });
 
   try {
+    await ensureAdminTables(db);
     const url = new URL(request.url);
     const action = url.searchParams.get('action') ?? undefined;
     const limit = Math.min(Number(url.searchParams.get('limit')) || 50, 200);
