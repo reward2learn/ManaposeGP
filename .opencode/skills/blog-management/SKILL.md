@@ -47,14 +47,36 @@ Set via admin blog editor or during post creation.
 
 ## Blog Service Functions
 
-- `createBlogPost({ scraped, enhanced, published, imageUrl, sectionImages })` — create with images and status
-- `updateBlogPost(id, data)` — edit any field; re-indexes if content changes
-- `listBlogPosts(limit, offset)` — published only
-- `listAllBlogPosts(limit, offset)` — all posts for admin
-- `getBlogPostBySlug(slug)` — published only (public)
-- `getBlogPostById(id)` — any status (admin + AI)
-- `findPostBySourceUrl(url)` — duplicate check
-- `ensureBlogPostColumns(db)` — adds `section_images` column
+All functions MUST call `await ensureBlogPostColumns(db)` before any `$queryRawUnsafe` — including read queries. The `BLOG_SELECT` constant references `section_images` via `COALESCE`, but PostgreSQL rejects the query outright if the column doesn't exist (COALESCE doesn't help — the column must be present for the SQL parser). Failing to add this guard means blog pages silently return zero results.
+
+- `createBlogPost({ scraped, enhanced, published, imageUrl, sectionImages })` — create with images and status ✅
+- `updateBlogPost(id, data)` — edit any field; re-indexes if content changes ✅
+- `listBlogPosts(limit, offset)` — published only ✅
+- `listAllBlogPosts(limit, offset)` — all posts for admin ✅
+- `getBlogPostBySlug(slug)` — published only (public) ✅
+- `getBlogPostById(id)` — any status (admin + AI) ✅
+- `findPostBySourceUrl(url)` — duplicate check ✅
+- `ensureBlogPostColumns(db)` — adds `section_images` column (JSONB NOT NULL DEFAULT '[]')
+
+### DDL Safety Rule (Critical)
+
+When adding a column via runtime DDL (`ensureBlogPostColumns` / `ALTER TABLE ADD COLUMN IF NOT EXISTS`), you must call the ensure function in **every** function that queries the table — not just write functions. The column exists only in production's PostgreSQL, not in the Prisma/ZenStack schema. A `SELECT` that references the column will throw if the DDL hasn't been called yet in that serverless cold start.
+
+**Pattern:**
+```ts
+// ✅ Correct — guard before every query
+async function listBlogPosts() {
+  const db = createClient();
+  await ensureBlogPostColumns(db);  // <-- MUST be first
+  return db.$queryRawUnsafe(`SELECT ${BLOG_SELECT} FROM blog_posts ...`);
+}
+
+// ❌ Wrong — query fails silently on cold start
+async function listBlogPosts() {
+  const db = createClient();
+  return db.$queryRawUnsafe(`SELECT ${BLOG_SELECT} FROM blog_posts ...`);
+}
+```
 
 ## Content Extraction Methods
 

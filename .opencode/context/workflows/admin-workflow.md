@@ -45,8 +45,16 @@ Step-by-step workflows for common admin development tasks.
 1. Identify the missing column from the Prisma error message
 2. Add `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` to the relevant ensure function
 3. Wrap each ALTER TABLE in its own `$executeRawUnsafe` call (one statement per call)
-4. Call the ensure function BEFORE the Prisma query in the route handler
+4. **Call the ensure function in EVERY function that queries the table** — not just write functions, not just route handlers. When a column is added via runtime DDL (ALTER TABLE), it exists in PostgreSQL but not in the Prisma/ZenStack schema. Any `$queryRawUnsafe` that references the column (even via `COALESCE`) will throw if the DDL hasn't run first on that serverless cold start. This is the most common cause of "page shows zero results" bugs.
 5. Optionally add a raw SQL fallback if ALTER TABLE might fail
+
+### Checklist when adding a runtime DDL column:
+- [ ] ensure function itself (`ensureXColumns`)
+- [ ] create/insert function ✅
+- [ ] update function ✅
+- [ ] list/find functions (read queries) ← **most commonly missed**
+- [ ] getById functions ← **most commonly missed**
+- [ ] search/duplicate-check functions ← **most commonly missed**
 
 ## Debugging a 500 on an admin API
 

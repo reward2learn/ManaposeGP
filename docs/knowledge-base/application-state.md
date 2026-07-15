@@ -47,7 +47,8 @@ Comprehensive reference for agents and developers working on the platform.
 ### DDL Pattern
 - Always split multi-statement DDL into individual `$executeRawUnsafe` calls (PostgreSQL error 42601)
 - Use `ALTER TABLE ADD COLUMN IF NOT EXISTS` for migrations
-- Call ensure functions BEFORE Prisma queries in route handlers
+- Call ensure functions in **every function** that queries the table — read + write + find — not just route handlers
+- Runtime DDL columns exist in PostgreSQL but NOT in the Prisma/ZenStack schema; a `$queryRawUnsafe` SELECT referencing them will fail on cold start if the DDL hasn't been called first
 - Wrap DDL in try/catch for resilience
 
 ### Raw SQL Fallback

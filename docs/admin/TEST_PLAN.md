@@ -152,6 +152,48 @@ Test coverage plan for ManaposeGP admin platform features. Run via `bun run test
 | ADM-05 | Error state shows zeros | All values 0 when fetch fails |
 | ADM-06 | OpenAI card shows "Click to configure" when missing | Subtitle text correct |
 
+## New Tests Needed: Blog API Routes
+
+### `src/app/api/blog/admin/route.test.ts`
+
+| Test ID | Scenario | Expected |
+|---------|----------|----------|
+| BLOG-01 | GET without session | 401 |
+| BLOG-02 | GET with pin tier | 200, posts array (includes drafts + published) |
+| BLOG-03 | GET with public tier (no pin) | 401 |
+| BLOG-04 | GET with pin tier, table has no `section_images` column | 200, `ensureBlogPostColumns` runs DDL, query succeeds |
+| BLOG-05 | GET with id param | 200, single post with correct shape |
+| BLOG-06 | GET with id, post not found | 404 |
+| BLOG-07 | PATCH update title/content | 200, post updated, re-indexed |
+| BLOG-08 | PATCH toggle published (draft → published) | 200, published=true |
+| BLOG-09 | PATCH update sectionImages | 200, JSONB stored correctly |
+| BLOG-10 | PATCH invalid body (no id) | 400, "id is required" |
+| BLOG-11 | GET listAllBlogPosts returns drafts | Drafts included in response |
+
+### `src/app/api/blog/route.test.ts`
+
+| Test ID | Scenario | Expected |
+|---------|----------|----------|
+| PBLOG-01 | GET public blog listing | 200, posts array |
+| PBLOG-02 | Only published posts returned | `published = true` filter; no drafts |
+| PBLOG-03 | Posts ordered by created_at DESC | Newest first |
+| PBLOG-04 | `section_images` column missing | 200, `ensureBlogPostColumns` runs DDL first |
+
+### Blog Component Tests
+
+| Test ID | Scenario | Expected |
+|---------|----------|----------|
+| BCOMP-01 | Admin blog page loads and fetches posts | table renders with draft + published rows |
+| BCOMP-02 | Published chip shows "Published" (green) | Chip variant correct |
+| BCOMP-03 | Draft chip shows "Draft" (orange) | Chip variant correct |
+| BCOMP-04 | Clicking draft chip toggles to published | PATCH call succeeds, chip updates |
+| BCOMP-05 | Edit dialog opens with pre-filled fields | title, content, excerpt, imageUrl, sectionImages, published populated |
+| BCOMP-06 | Save in edit dialog calls PATCH | updateBlogPost called with changed fields |
+| BCOMP-07 | Public blog page `/blog` shows only published posts | No draft posts rendered |
+| BCOMP-08 | Empty state when no published posts exist | "No posts yet" or similar placeholder |
+| BCOMP-09 | Blog post cards show imageUrl as thumbnail | Image renders or fallback shown |
+| BCOMP-10 | `sectionImages` renders in post detail view | Body images from JSONB array displayed |
+
 ## E2E Tests (Playwright)
 
 ### `e2e/admin-flows.spec.ts`
