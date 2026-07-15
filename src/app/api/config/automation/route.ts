@@ -10,6 +10,7 @@ import { scrapeUrl, type ScrapedContent } from '@/domain/blog/url-scraper';
 import { enhanceContent } from '@/domain/blog/content-enhancer';
 import { createBlogPost } from '@/domain/blog/blog-service';
 import { indexBlogPost } from '@/domain/knowledge/ai-indexer';
+import * as cheerio from 'cheerio';
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -33,6 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Single URL scraping
   if (action === 'scrape-url') {
     return handleScrapeUrl(request);
+  }
+
+  // Manual content paste
+  if (action === 'paste-content') {
+    return handlePasteContent(request);
   }
 
   // Config update
@@ -139,4 +145,90 @@ async function handleArticleScrape(articleUrl: string): Promise<NextResponse> {
     success: true,
     post: { title: blogPost.title, slug: blogPost.slug, url: articleUrl, type: 'article' },
   });
+}
+
+async function handlePasteContent(request: Request): Promise<NextResponse> {
+  try {
+    const body = await request.json() as {
+      sourceUrl?: string;
+      title?: string;
+      content?: string;
+    };
+    const rawContent = body.content?.trim();
+    const sourceUrl = body.sourceUrl?.trim() || null;
+    const userTitle = body.title?.trim() || null;
+
+    if (!rawContent) {
+      return NextResponse.json({ success: false, error: 'Content is required' }, { status: 400 });
+    }
+
+    if (rawContent.length < 50) {
+      return NextResponse.json({ success: false, error: 'Content is too short. Paste the full article text (minimum 50 characters).' }, { status: 400 });
+    }
+
+    // Extract images from HTML if the content contains HTML tags
+    let images: Array<{ src: string; alt: string }> = [];
+    let plainText = rawContent;
+    let imageUrl: string | undefined;
+
+    if (/<[a-z][\s\S]*>/i.test(rawContent)) {
+      // HTML content — extract images and strip tags
+      const $ = cheerio.load(rawContent);
+      $('img').each((_, el) => {
+        const src = $(el).attr('src');
+        const alt = $(el).attr('alt') || '';
+        if (src) images.push({ src, alt });
+      });
+      if (images.length > 0) {
+        imageUrl = images[0].src;
+      }
+      // Get text content
+      plainText = $('body').text() || $.text() || rawContent.replace(/<[^>]*>/g, ' ');
+    }
+
+    // Clean up whitespace
+    plainText = plainText.replace(/\s+/g, ' ').trim();
+
+    // Generate title if not provided
+    const title = userTitle || plainText.slice(0, 80).replace(/\n/g, ' ');
+
+    // Source name from URL or fallback
+    let sourceName = 'Pasted content';
+    if (sourceUrl) {
+      try {
+        sourceName = new URL(sourceUrl).hostname.replace('www.', '');
+      } catch { /* ignore */ }
+    }
+
+    const scraped = {
+      title,
+      content: plainText,
+      excerpt: plainText.slice(0, 200) + '…',
+      imageUrl,
+      images: images.map((i) => ({ src: i.src, alt: i.alt })),
+      sourceName,
+    };
+
+    // Prompt the AI to rephrase/format the pasted content
+    const aiPrompt = `Rewrite and format the following article content into a well-structured, engaging blog post for the ManaposeGP health platform. Use Australian English spelling. Preserve all key facts, statistics, and medical information. Add appropriate section headings. The source is ${sourceName}.${sourceUrl ? `\nSource URL: ${sourceUrl}` : ''}\n\n${scraped.content}`;
+
+    const enhanced = await enhanceContent(scraped.title, aiPrompt, sourceName);
+    const blogPost = await createBlogPost({
+      scraped: { ...scraped, content: aiPrompt },
+      enhanced,
+      sourceUrl: sourceUrl ?? '',
+    });
+
+    indexBlogPost(blogPost.id, blogPost.title, blogPost.content).catch(() => {});
+
+    return NextResponse.json({
+      success: true,
+      post: { title: blogPost.title, slug: blogPost.slug, url: sourceUrl, type: 'pasted' },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Failed to process content' },
+      { status: 500 },
+    );
+  }
 }

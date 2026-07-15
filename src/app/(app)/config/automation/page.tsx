@@ -91,6 +91,14 @@ export default function AutomationConfigPage() {
   const [articleResult, setArticleResult] = useState<{ title: string; slug: string } | null>(null);
   const [articleError, setArticleError] = useState<string | null>(null);
 
+  // Manual content paste state
+  const [pasteSourceUrl, setPasteSourceUrl] = useState('');
+  const [pasteTitle, setPasteTitle] = useState('');
+  const [pasteContent, setPasteContent] = useState('');
+  const [pasteSubmitting, setPasteSubmitting] = useState(false);
+  const [pasteResult, setPasteResult] = useState<{ title: string; slug: string } | null>(null);
+  const [pasteError, setPasteError] = useState<string | null>(null);
+
   const fetchConfig = useCallback(async () => {
     setLoading(true);
     try {
@@ -206,6 +214,39 @@ export default function AutomationConfigPage() {
       setArticleError('Network error');
     }
     finally { setArticleScraping(false); }
+  };
+
+  const handlePasteContent = async () => {
+    if (!pasteContent.trim()) return;
+    setPasteSubmitting(true);
+    setPasteResult(null);
+    setPasteError(null);
+    try {
+      const res = await fetch('/api/config/automation?action=paste-content', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceUrl: pasteSourceUrl.trim() || undefined,
+          title: pasteTitle.trim() || undefined,
+          content: pasteContent,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPasteResult(data.post);
+        setPasteSourceUrl('');
+        setPasteTitle('');
+        setPasteContent('');
+        setSuccess(`Post created from pasted content: ${data.post.title}`);
+        fetchConfig();
+      } else {
+        setPasteError(data.error || 'Failed to create post');
+      }
+    } catch {
+      setPasteError('Network error');
+    }
+    finally { setPasteSubmitting(false); }
   };
 
   return (
@@ -434,6 +475,74 @@ export default function AutomationConfigPage() {
             )}
             {articleError && (
               <Alert severity="error" sx={{ mt: 2 }} onClose={() => setArticleError(null)}>{articleError}</Alert>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Paste Content Manually */}
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+              Paste Content Manually
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              When automated scraping fails, paste the article content directly. Provide the source URL for attribution
+              and the article title (optional — AI will generate one if left blank). Content can be HTML or plain text.
+            </Typography>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Source URL (optional)"
+                  placeholder="https://www.msn.com/en-au/health/..."
+                  value={pasteSourceUrl}
+                  onChange={(e) => setPasteSourceUrl(e.target.value)}
+                  size="small"
+                  disabled={pasteSubmitting}
+                  helperText="Original article URL for attribution and reference"
+                />
+                <TextField
+                  fullWidth
+                  label="Article Title (optional)"
+                  placeholder="AI will generate from content if left empty"
+                  value={pasteTitle}
+                  onChange={(e) => setPasteTitle(e.target.value)}
+                  size="small"
+                  disabled={pasteSubmitting}
+                />
+              </Stack>
+              <TextField
+                fullWidth
+                label="Article Content"
+                placeholder="Paste the full article text or HTML here..."
+                value={pasteContent}
+                onChange={(e) => setPasteContent(e.target.value)}
+                size="small"
+                multiline
+                minRows={4}
+                maxRows={12}
+                disabled={pasteSubmitting}
+                helperText="Images in HTML img tags will be preserved. The AI will rephrase and format this content into a blog post."
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handlePasteContent}
+                disabled={pasteSubmitting || !pasteContent.trim()}
+                startIcon={pasteSubmitting ? <CircularProgress size={16} /> : <LinkIcon />}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {pasteSubmitting ? 'Creating…' : 'Create Blog Post'}
+              </Button>
+            </Stack>
+            {pasteResult && (
+              <Alert severity="success" sx={{ mt: 2 }} onClose={() => setPasteResult(null)}>
+                Post created: <strong>{pasteResult.title}</strong> —{' '}
+                <a href={`/blog/${pasteResult.slug}`} target="_blank" rel="noopener" style={{ fontWeight: 600 }}>View post</a>
+              </Alert>
+            )}
+            {pasteError && (
+              <Alert severity="error" sx={{ mt: 2 }} onClose={() => setPasteError(null)}>{pasteError}</Alert>
             )}
           </CardContent>
         </Card>
