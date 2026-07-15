@@ -43,7 +43,7 @@ describe('AuthGate', () => {
 
   it('shows loading fallback until bootstrap completes', () => {
     renderWithAuth('google', false);
-    expect(screen.getByText('Checking session…')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('denies google tier (patient) on pin-tier routes', () => {
