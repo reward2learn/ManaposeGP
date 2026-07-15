@@ -274,7 +274,7 @@ export const PAGE_CATALOG: Record<string, PageDefinition> = {
   'consultation-assist': {
     slug: 'consultation-assist',
     title: 'Consultation Assistant',
-    navLabel: 'Consult',
+    navLabel: 'AI Assist',
     showInNav: true,
     authTier: 'google', // Both pin and google tiers via AuthGate
     sections: [
@@ -287,7 +287,7 @@ export const PAGE_CATALOG: Record<string, PageDefinition> = {
   'gp-consult': {
     slug: 'gp-consult',
     title: 'GP Consultation',
-    navLabel: 'Consult',
+    navLabel: 'GP Consultation',
     showInNav: true,
     authTier: 'pin',
     sections: [
