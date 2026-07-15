@@ -81,6 +81,7 @@ const BLOG_SELECT = `id, title, slug, content, excerpt, source_url as "sourceUrl
  */
 export async function listBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]> {
   const db = createClient();
+  await ensureBlogPostColumns(db);
   const rows = await db.$queryRawUnsafe<Array<BlogPost>>(
     `SELECT ${BLOG_SELECT}
      FROM blog_posts
@@ -98,6 +99,7 @@ export async function listBlogPosts(limit = 20, offset = 0): Promise<BlogPost[]>
  */
 export async function listAllBlogPosts(limit = 50, offset = 0): Promise<BlogPost[]> {
   const db = createClient();
+  await ensureBlogPostColumns(db);
   const rows = await db.$queryRawUnsafe<Array<BlogPost>>(
     `SELECT ${BLOG_SELECT}
      FROM blog_posts
@@ -114,6 +116,7 @@ export async function listAllBlogPosts(limit = 50, offset = 0): Promise<BlogPost
  */
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   const db = createClient();
+  await ensureBlogPostColumns(db);
   const result = await db.$queryRawUnsafe<Array<BlogPost>>(
     `SELECT ${BLOG_SELECT}
      FROM blog_posts
@@ -128,6 +131,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
  */
 export async function getBlogPostById(id: string): Promise<BlogPost | null> {
   const db = createClient();
+  await ensureBlogPostColumns(db);
   const result = await db.$queryRawUnsafe<Array<BlogPost>>(
     `SELECT ${BLOG_SELECT} FROM blog_posts WHERE id = $1`,
     id,
@@ -183,8 +187,9 @@ export async function updateBlogPost(
 export async function findPostBySourceUrl(sourceUrl: string): Promise<BlogPost | null> {
   if (!sourceUrl) return null;
   const db = createClient();
+  await ensureBlogPostColumns(db);
   const result = await db.$queryRawUnsafe<Array<BlogPost>>(
-    `SELECT id, title, slug, content, excerpt, source_url as "sourceUrl", source_name as "sourceName", image_url as "imageUrl", author_name as "authorName", COALESCE(tags, '{}') as tags, published, created_at as "createdAt"
+    `SELECT ${BLOG_SELECT}
      FROM blog_posts
      WHERE source_url = $1
      LIMIT 1`,
