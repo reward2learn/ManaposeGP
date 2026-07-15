@@ -18,8 +18,10 @@ export interface AppSettingsDto {
 }
 
 export async function ensureAppSettingsTable(db: DbClient): Promise<void> {
-  await db.$executeRawUnsafe(APP_SETTINGS_DDL);
-  await db.$executeRawUnsafe(APP_SETTINGS_ALTER);
+  try { await db.$executeRawUnsafe(APP_SETTINGS_DDL); }
+  catch (err) { console.warn('[app-settings] CREATE TABLE failed:', err instanceof Error ? err.message : err); }
+  try { await db.$executeRawUnsafe(APP_SETTINGS_ALTER); }
+  catch (err) { console.warn('[app-settings] ALTER TABLE failed:', err instanceof Error ? err.message : err); }
 }
 
 export async function getAppSettings(db: DbClient): Promise<AppSettingsDto> {

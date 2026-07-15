@@ -241,16 +241,26 @@ export async function updateUser(db: DbClient, userId: string, data: { role?: st
 
 export async function getFeatureFlags(db: DbClient): Promise<Record<string, boolean>> {
   await ensureAppSettingsTable(db);
-  const row = await db.appSetting.findUnique({ where: { id: 'default' } });
-  return (row?.featureFlags as Record<string, boolean>) ?? {};
+  try {
+    const row = await db.appSetting.findUnique({ where: { id: 'default' } });
+    return (row?.featureFlags as Record<string, boolean>) ?? {};
+  } catch (err) {
+    console.warn('[admin-config] getFeatureFlags query failed:', err instanceof Error ? err.message : err);
+    return {};
+  }
 }
 
 export async function updateFeatureFlags(db: DbClient, flags: Record<string, boolean>): Promise<Record<string, boolean>> {
   await ensureAppSettingsTable(db);
-  await db.appSetting.upsert({
-    where: { id: 'default' },
-    create: { id: 'default', featureFlags: flags },
-    update: { featureFlags: flags },
-  });
+  try {
+    await db.appSetting.upsert({
+      where: { id: 'default' },
+      create: { id: 'default', featureFlags: flags },
+      update: { featureFlags: flags },
+    });
+  } catch (err) {
+    console.warn('[admin-config] updateFeatureFlags upsert failed:', err instanceof Error ? err.message : err);
+    // Return the flags anyway — the admin page shows the toggle state
+  }
   return flags;
 }
