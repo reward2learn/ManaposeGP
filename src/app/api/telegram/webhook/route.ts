@@ -3,7 +3,7 @@
  *
  * Setup:
  * 1. Create bot via @BotFather on Telegram → get TELEGRAM_BOT_TOKEN
- * 2. Set webhook: POST https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://manaposegp.vercel.app/api/telegram/webhook
+ * 2. Set webhook: POST https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://manapausegp.vercel.app/api/telegram/webhook
  * 3. Store TELEGRAM_BOT_TOKEN in secrets table (key: TELEGRAM_BOT_TOKEN)
  *
  * Usage: Admin sends a URL to the bot → bot scrapes it → creates blog post → replies with link
@@ -93,7 +93,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
 
     // Step 5: Reply with success
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://manaposegp.vercel.app';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://manapausegp.vercel.app';
     const postUrl = `${appUrl}/blog/${post.slug}`;
 
     await sendTelegramMessage(
