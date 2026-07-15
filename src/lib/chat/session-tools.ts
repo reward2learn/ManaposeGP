@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/db';
 import { sanitizeConversationMessages, type ConversationMessageInput } from '@/lib/chat/conversation-messages';
+import { searchKnowledgeBase } from '@/domain/knowledge/rag-service';
 
 export type ChatSessionAction =
   | 'new_chat_session'
@@ -78,6 +79,24 @@ export const CHAT_SESSION_OPENAI_TOOLS = [
       },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search_blog_knowledge',
+      description: 'Search the ManaposeGP blog knowledge base for health articles, menopause information, GP guidance, and women\'s health topics. Use this when the user asks about health conditions, treatments, medical advice, or wellness topics covered in the blog.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'The search query to find relevant blog articles (e.g., "menopause symptoms", "hormone therapy", "bone health")',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 export interface SessionToolContext {
@@ -145,6 +164,25 @@ export async function executeSessionTool(
         toolMessage: `Conversation saved (id ${saved.id}).`,
         clientAction: 'save_conversation',
       };
+    }
+    case 'search_blog_knowledge': {
+      const query = typeof args.query === 'string' ? args.query.trim() : '';
+      if (!query) return { toolMessage: 'Please provide a search query.' };
+
+      try {
+        const results = await searchKnowledgeBase(query, 5);
+        if (!results.length) {
+          return { toolMessage: 'No relevant blog articles found for that query. Try rephrasing your search.' };
+        }
+
+        const formatted = results.map((r, i) =>
+          `${i + 1}. [${r.source}] ${r.text.slice(0, 300)}`
+        ).join('\n\n');
+
+        return { toolMessage: `Found ${results.length} relevant article(s):\n\n${formatted}` };
+      } catch (err) {
+        return { toolMessage: 'Search failed: ' + (err instanceof Error ? err.message : 'Unknown error') };
+      }
     }
     default:
       return { toolMessage: `Unknown session tool: ${toolName}` };

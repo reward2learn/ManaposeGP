@@ -79,11 +79,17 @@ export default function AutomationConfigPage() {
   const [scheduleTime, setScheduleTime] = useState('23:00');
   const [scheduleTimezone, setScheduleTimezone] = useState('Australia/Sydney');
 
-  // Single URL scrape state
+  // Single URL scrape state (Instagram)
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<{ title: string; slug: string } | null>(null);
   const [scrapeError, setScrapeError] = useState<string | null>(null);
+
+  // Article URL scrape state
+  const [articleUrl, setArticleUrl] = useState('');
+  const [articleScraping, setArticleScraping] = useState(false);
+  const [articleResult, setArticleResult] = useState<{ title: string; slug: string } | null>(null);
+  const [articleError, setArticleError] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -173,6 +179,33 @@ export default function AutomationConfigPage() {
       setScrapeError('Network error');
     }
     finally { setScraping(false); }
+  };
+
+  const handleScrapeArticle = async () => {
+    if (!articleUrl.trim()) return;
+    setArticleScraping(true);
+    setArticleResult(null);
+    setArticleError(null);
+    try {
+      const res = await fetch('/api/config/automation?action=scrape-url', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: articleUrl, type: 'article' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setArticleResult(data.post);
+        setArticleUrl('');
+        setSuccess(`Article created: ${data.post.title}`);
+        fetchConfig();
+      } else {
+        setArticleError(data.error || 'Failed to scrape article');
+      }
+    } catch {
+      setArticleError('Network error');
+    }
+    finally { setArticleScraping(false); }
   };
 
   return (
@@ -357,9 +390,53 @@ export default function AutomationConfigPage() {
                   <Typography variant="caption" color="text.disabled">Vercel Cron fires at 13:00 UTC daily</Typography>
                 </Grid>
               </Grid>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         )}
+
+        {/* Scrape Any Health Article URL */}
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+              Extract Health Article from URL
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Paste any health article URL (Jean Hailes, RACGP, HealthDirect, AMS, or other trusted sources).
+              The article will be scraped, enhanced with AI, and published to the blog — then indexed for the AI assistant.
+            </Typography>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+              <TextField
+                fullWidth
+                label="Article URL"
+                placeholder="https://www.jeanhailes.org.au/health-a-z/menopause/understanding-menopause"
+                value={articleUrl}
+                onChange={(e) => setArticleUrl(e.target.value)}
+                size="small"
+                disabled={articleScraping}
+                helperText="Health articles, medical journals, or trusted health sources work best"
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleScrapeArticle}
+                disabled={articleScraping || !articleUrl.trim()}
+                startIcon={articleScraping ? <CircularProgress size={16} /> : <LinkIcon />}
+                sx={{ minWidth: 140, mt: 0.5 }}
+              >
+                {articleScraping ? 'Scraping…' : 'Scrape & Publish'}
+              </Button>
+            </Stack>
+            {articleResult && (
+              <Alert severity="success" sx={{ mt: 2 }} onClose={() => setArticleResult(null)}>
+                Article created: <strong>{articleResult.title}</strong> —{' '}
+                <a href={`/blog/${articleResult.slug}`} target="_blank" rel="noopener" style={{ fontWeight: 600 }}>View post</a>
+              </Alert>
+            )}
+            {articleError && (
+              <Alert severity="error" sx={{ mt: 2 }} onClose={() => setArticleError(null)}>{articleError}</Alert>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Run history */}
         <Paper sx={{ p: 2 }}>
