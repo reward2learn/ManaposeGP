@@ -118,6 +118,31 @@ export async function listGps(db: DbClient): Promise<GpProfile[]> {
   );
 }
 
+export async function listGpsForVerification(db: DbClient): Promise<Array<{
+  id: string; name: string; practiceName: string | null; practiceSuburb: string | null;
+  practiceState: string | null; ahpraNumber: string | null; email: string | null;
+  verified: boolean; verificationStatus: string; verificationNotes: string | null;
+  createdAt: string; indemnityProvider: string | null; indemnityExpiryDate: string | null;
+}>> {
+  // Use raw SQL to avoid Prisma schema mismatch on verification_status column.
+  return db.$queryRawUnsafe(`
+    SELECT
+      id, name,
+      practice_name as "practiceName",
+      practice_suburb as "practiceSuburb",
+      practice_state as "practiceState",
+      ahpra_number as "ahpraNumber",
+      email, verified,
+      COALESCE(verification_status, 'PENDING') as "verificationStatus",
+      verification_notes as "verificationNotes",
+      created_at as "createdAt",
+      indemnity_provider as "indemnityProvider",
+      indemnity_expiry_date as "indemnityExpiryDate"
+    FROM gp_profiles
+    ORDER BY created_at DESC
+  `);
+}
+
 export async function updateGp(
   db: DbClient,
   gpId: string,
